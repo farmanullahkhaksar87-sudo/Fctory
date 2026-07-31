@@ -38,6 +38,7 @@ export default function App() {
     weightKg: '',
   });
 
+  const [editingId, setEditingId] = useState(null); // ایڈیٹ کے لیے ID ٹریکنگ
   const [issueSuccess, setIssueSuccess] = useState('');
 
   // AI تخمینہ
@@ -72,7 +73,7 @@ export default function App() {
     setTimeout(() => setSuccessMessage(''), 3000);
   };
 
-  // دھاگا ایشو فارم ہینڈلر
+  // دھاگا ایشو فارم ہینڈلرز (اضافہ اور ایڈیٹ)
   const handleIssueChange = (e) => {
     setIssueForm({ ...issueForm, [e.target.name]: e.target.value });
   };
@@ -81,18 +82,60 @@ export default function App() {
     e.preventDefault();
     if (!issueForm.bags || !issueForm.weightKg) return;
 
-    const newEntry = {
-      id: Date.now(),
-      date: issueForm.date,
-      threadName: issueForm.threadName,
-      bags: parseFloat(issueForm.bags),
-      weightKg: parseFloat(issueForm.weightKg),
-    };
+    if (editingId !== null) {
+      // ایڈیٹ شدہ ریکارڈ اپڈیٹ کریں
+      setIssuedThreads(
+        issuedThreads.map((item) =>
+          item.id === editingId
+            ? {
+                ...item,
+                date: issueForm.date,
+                threadName: issueForm.threadName,
+                bags: parseFloat(issueForm.bags),
+                weightKg: parseFloat(issueForm.weightKg),
+              }
+            : item
+        )
+      );
+      setIssueSuccess('ریکارڈ میں کامیابی سے تبدیلی کر دی گئی ہے!');
+      setEditingId(null);
+    } else {
+      // نیا ریکارڈ شامل کریں
+      const newEntry = {
+        id: Date.now(),
+        date: issueForm.date,
+        threadName: issueForm.threadName,
+        bags: parseFloat(issueForm.bags),
+        weightKg: parseFloat(issueForm.weightKg),
+      };
+      setIssuedThreads([newEntry, ...issuedThreads]);
+      setIssueSuccess('فیکٹری کے لیے دھاگے کا ریکارڈ کامیابی سے محفوظ ہو گیا!');
+    }
 
-    setIssuedThreads([newEntry, ...issuedThreads]);
-    setIssueSuccess('فیکٹری کے لیے دھاگے کا ریکارڈ کامیابی سے محفوظ ہو گیا!');
-    setIssueForm({ ...issueForm, bags: '', weightKg: '' });
+    setIssueForm({ date: todayDate, threadName: 'وولن تھریڈ / دھاگا', bags: '', weightKg: '' });
     setTimeout(() => setIssueSuccess(''), 3000);
+  };
+
+  // ریکارڈ ایڈیٹ کرنے کا عمل
+  const handleEdit = (item) => {
+    setEditingId(item.id);
+    setIssueForm({
+      date: item.date,
+      threadName: item.threadName,
+      bags: item.bags,
+      weightKg: item.weightKg,
+    });
+  };
+
+  // ریکارڈ ڈیلیٹ کرنے کا عمل
+  const handleDelete = (id) => {
+    if (window.confirm('کیا آپ واقعی اس ریکارڈ کو ختم کرنا چاہتے ہیں؟')) {
+      setIssuedThreads(issuedThreads.filter((item) => item.id !== id));
+      if (editingId === id) {
+        setEditingId(null);
+        setIssueForm({ date: todayDate, threadName: 'وولن تھریڈ / دھاگا', bags: '', weightKg: '' });
+      }
+    }
   };
 
   const netGradeADozens = Math.max(
@@ -353,11 +396,13 @@ export default function App() {
               })}
             </div>
 
-            {/* دھاگا جاری کرنے کا فارم (مشین کے آپشن کے بغیر) */}
+            {/* دھاگا جاری کرنے کا فارم */}
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
               <div className="border-b pb-3 flex justify-between items-center">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-800">فیکٹری میں جاری کردہ دھاگے کا اندراج (Issue to Factory)</h3>
+                  <h3 className="text-lg font-bold text-slate-800">
+                    {editingId ? '✏️ جاری کردہ دھاگے کے ریکارڈ میں ترمیم کریں' : 'فیکٹری میں جاری کردہ دھاگے کا اندراج (Issue to Factory)'}
+                  </h3>
                   <p className="text-xs text-slate-500 mt-0.5">فیکٹری کے لیے بھیجے جانے والے بوروں اور وزن کا ریکارڈ محفوظ کریں</p>
                 </div>
               </div>
@@ -420,13 +465,27 @@ export default function App() {
                   />
                 </div>
 
-                <div className="md:col-span-4 mt-2">
+                <div className="md:col-span-4 mt-2 flex gap-2">
                   <button
                     type="submit"
-                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow print:hidden"
+                    className={`flex-1 py-3 text-white font-bold text-xs rounded-xl shadow print:hidden ${
+                      editingId ? 'bg-amber-600 hover:bg-amber-700' : 'bg-indigo-600 hover:bg-indigo-700'
+                    }`}
                   >
-                    + جاری کردہ دھاگا محفوظ کریں
+                    {editingId ? '💾 ترمیم شدہ ریکارڈ محفوظ کریں' : '+ جاری کردہ دھاگا محفوظ کریں'}
                   </button>
+                  {editingId && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingId(null);
+                        setIssueForm({ date: todayDate, threadName: 'وولن تھریڈ / دھاگا', bags: '', weightKg: '' });
+                      }}
+                      className="px-4 py-3 bg-slate-200 text-slate-700 font-bold text-xs rounded-xl hover:bg-slate-300 print:hidden"
+                    >
+                      منسوخ کریں
+                    </button>
+                  )}
                 </div>
               </form>
 
@@ -440,7 +499,7 @@ export default function App() {
                       <th className="p-2.5">دھاگے کا نام</th>
                       <th className="p-2.5">بورے</th>
                       <th className="p-2.5">وزن (kg)</th>
-                      <th className="p-2.5">تفصیل</th>
+                      <th className="p-2.5 print:hidden">ایکشن (کنٹرولز)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -455,7 +514,20 @@ export default function App() {
                           <td className="p-2.5 font-bold text-slate-800">{item.threadName}</td>
                           <td className="p-2.5 font-black text-indigo-600">{item.bags} بورے</td>
                           <td className="p-2.5 font-black text-slate-800">{item.weightKg} kg</td>
-                          <td className="p-2.5 text-slate-500">فیکٹری میں منتقل شدہ</td>
+                          <td className="p-2.5 flex items-center gap-2 print:hidden">
+                            <button
+                              onClick={() => handleEdit(item)}
+                              className="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-lg text-xs font-bold border border-amber-300 transition-all"
+                            >
+                              ✏️ ایڈیٹ
+                            </button>
+                            <button
+                              onClick={() => handleDelete(item.id)}
+                              className="px-2.5 py-1 bg-rose-100 hover:bg-rose-200 text-rose-800 rounded-lg text-xs font-bold border border-rose-300 transition-all"
+                            >
+                              🗑️ ڈیلیٹ
+                            </button>
+                          </td>
                         </tr>
                       ))
                     )}

@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 export default function App() {
   const [activeTab, setActiveTab] = useState('production');
 
-  // آج کی تاریخ تاریخ فارمیٹ (YYYY-MM-DD) میں حاصل کرنے کا طریقہ
+  // آج کی تاریخ فارمیٹ (YYYY-MM-DD) میں
   const todayDate = new Date().toISOString().split('T')[0];
 
   // 1. پروڈکشن فارم اسٹیٹ
@@ -14,7 +14,6 @@ export default function App() {
     size: 'L',
     dozensProduced: '',
     dozensDefective: 0,
-    machineId: '',
   });
 
   const [successMessage, setSuccessMessage] = useState('');
@@ -25,6 +24,21 @@ export default function App() {
     { id: 2, name: 'اکریلک تھریڈ', bags: 5, weightPerBagKg: 40, minLimitBags: 2 },
     { id: 3, name: 'اسپینڈیکس / الیکٹرا', bags: 4, weightPerBagKg: 25, minLimitBags: 1 },
   ]);
+
+  // فیکٹری کو جاری کردہ دھاگے کا ریکارڈ (Thread Issue Log State)
+  const [issuedThreads, setIssuedThreads] = useState([
+    { id: 1, date: todayDate, threadName: 'وولن تھریڈ / دھاگا', bags: 2, weightKg: 90 },
+    { id: 2, date: todayDate, threadName: 'اکریلک تھریڈ', bags: 1, weightKg: 40 },
+  ]);
+
+  const [issueForm, setIssueForm] = useState({
+    date: todayDate,
+    threadName: 'وولن تھریڈ / دھاگا',
+    bags: '',
+    weightKg: '',
+  });
+
+  const [issueSuccess, setIssueSuccess] = useState('');
 
   // AI تخمینہ
   const [dozensToEstimate, setDozensToEstimate] = useState(100);
@@ -56,6 +70,29 @@ export default function App() {
     e.preventDefault();
     setSuccessMessage('روزانہ کی پروڈکشن کا اندراج کامیابی سے ہو گیا ہے!');
     setTimeout(() => setSuccessMessage(''), 3000);
+  };
+
+  // دھاگا ایشو فارم ہینڈلر
+  const handleIssueChange = (e) => {
+    setIssueForm({ ...issueForm, [e.target.name]: e.target.value });
+  };
+
+  const handleIssueSubmit = (e) => {
+    e.preventDefault();
+    if (!issueForm.bags || !issueForm.weightKg) return;
+
+    const newEntry = {
+      id: Date.now(),
+      date: issueForm.date,
+      threadName: issueForm.threadName,
+      bags: parseFloat(issueForm.bags),
+      weightKg: parseFloat(issueForm.weightKg),
+    };
+
+    setIssuedThreads([newEntry, ...issuedThreads]);
+    setIssueSuccess('فیکٹری کے لیے دھاگے کا ریکارڈ کامیابی سے محفوظ ہو گیا!');
+    setIssueForm({ ...issueForm, bags: '', weightKg: '' });
+    setTimeout(() => setIssueSuccess(''), 3000);
   };
 
   const netGradeADozens = Math.max(
@@ -281,6 +318,7 @@ export default function App() {
               </button>
             </div>
 
+            {/* گودام کا موجودہ اسٹاک کارڈز */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {threads.map((item) => {
                 const totalKg = item.bags * item.weightPerBagKg;
@@ -315,6 +353,118 @@ export default function App() {
               })}
             </div>
 
+            {/* دھاگا جاری کرنے کا فارم (مشین کے آپشن کے بغیر) */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <div className="border-b pb-3 flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800">فیکٹری میں جاری کردہ دھاگے کا اندراج (Issue to Factory)</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">فیکٹری کے لیے بھیجے جانے والے بوروں اور وزن کا ریکارڈ محفوظ کریں</p>
+                </div>
+              </div>
+
+              {issueSuccess && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl font-bold text-sm print:hidden">
+                  {issueSuccess}
+                </div>
+              )}
+
+              <form onSubmit={handleIssueSubmit} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">تاریخ</label>
+                  <input
+                    type="date"
+                    name="date"
+                    value={issueForm.date}
+                    onChange={handleIssueChange}
+                    className="w-full p-2.5 bg-slate-50 border rounded-xl text-xs font-bold text-slate-800"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">دھاگے کی قسم</label>
+                  <select
+                    name="threadName"
+                    value={issueForm.threadName}
+                    onChange={handleIssueChange}
+                    className="w-full p-2.5 bg-white border rounded-xl text-xs font-bold text-slate-800"
+                  >
+                    {threads.map((t) => (
+                      <option key={t.id} value={t.name}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">بورے (Bags)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    name="bags"
+                    value={issueForm.bags}
+                    onChange={handleIssueChange}
+                    placeholder="مثلاً: 2"
+                    className="w-full p-2.5 bg-white border rounded-xl text-xs font-bold text-slate-800"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">وزن (کلوگرام)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    name="weightKg"
+                    value={issueForm.weightKg}
+                    onChange={handleIssueChange}
+                    placeholder="مثلاً: 90"
+                    className="w-full p-2.5 bg-white border rounded-xl text-xs font-bold text-slate-800"
+                  />
+                </div>
+
+                <div className="md:col-span-4 mt-2">
+                  <button
+                    type="submit"
+                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow print:hidden"
+                  >
+                    + جاری کردہ دھاگا محفوظ کریں
+                  </button>
+                </div>
+              </form>
+
+              {/* جاری شدہ دھاگے کا ریکارڈ (Table Log) */}
+              <div className="mt-4 overflow-x-auto">
+                <h4 className="font-bold text-slate-700 text-sm mb-2">حالیہ جاری شدہ ریکارڈ (Issue History)</h4>
+                <table className="w-full text-right border-collapse text-xs md:text-sm">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-700 border-b">
+                      <th className="p-2.5">تاریخ</th>
+                      <th className="p-2.5">دھاگے کا نام</th>
+                      <th className="p-2.5">بورے</th>
+                      <th className="p-2.5">وزن (kg)</th>
+                      <th className="p-2.5">تفصیل</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {issuedThreads.length === 0 ? (
+                      <tr>
+                        <td colSpan="5" className="text-center p-4 text-slate-400">کوئی ریکارڈ موجود نہیں۔</td>
+                      </tr>
+                    ) : (
+                      issuedThreads.map((item) => (
+                        <tr key={item.id} className="border-b hover:bg-slate-50/50">
+                          <td className="p-2.5 text-slate-600">{item.date}</td>
+                          <td className="p-2.5 font-bold text-slate-800">{item.threadName}</td>
+                          <td className="p-2.5 font-black text-indigo-600">{item.bags} بورے</td>
+                          <td className="p-2.5 font-black text-slate-800">{item.weightKg} kg</td>
+                          <td className="p-2.5 text-slate-500">فیکٹری میں منتقل شدہ</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* AI تخمینہ باکس */}
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
               <h3 className="text-lg font-bold text-slate-800 border-b pb-2">دھاگے کی بوریوں کا تخمینہ (Estimator)</h3>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

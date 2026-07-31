@@ -6,7 +6,7 @@ export default function App() {
   // 1. پروڈکشن فارم اسٹیٹ
   const [formData, setFormData] = useState({
     batchNumber: 'BATCH-2026-081',
-    workerName: '',
+    workerName: 'EMP-101',
     gloveType: 'cotton_knitted',
     size: 'L',
     dozensProduced: '',
@@ -32,11 +32,18 @@ export default function App() {
   const totalBagsNeeded = (totalRequiredKg / bagWeightKg).toFixed(1);
 
   // 3. تیار شدہ مال (Finished Goods Stock)
-  const [finishedStock, setFinishedStock] = useState([
+  const [finishedStock] = useState([
     { id: 1, item: 'کاٹن نٹڈ ہینڈ گلوز (Grade A)', size: 'L', cartons: 25, dozensPerCarton: 20, totalDozens: 500 },
     { id: 2, item: 'کاٹن نٹڈ ہینڈ گلوز (Grade A)', size: 'M', cartons: 18, dozensPerCarton: 20, totalDozens: 360 },
     { id: 3, item: 'لیٹیکس کوٹڈ گلوز (Grade A)', size: 'XL', cartons: 10, dozensPerCarton: 15, totalDozens: 150 },
     { id: 4, item: 'مکسڈ بی گریڈ دستانے (Grade B)', size: 'Free Size', cartons: 8, dozensPerCarton: 25, totalDozens: 200 },
+  ]);
+
+  // 4. کاریگر اور اجرت (Payroll)
+  const [workers, setWorkers] = useState([
+    { id: 'EMP-101', name: 'محمد علی', ratePerDozen: 80, dozensMadeToday: 25, advance: 500 },
+    { id: 'EMP-102', name: 'عثمان خان', ratePerDozen: 85, dozensMadeToday: 30, advance: 0 },
+    { id: 'EMP-103', name: 'طارق محمود', ratePerDozen: 80, dozensMadeToday: 20, advance: 200 },
   ]);
 
   const handleChange = (e) => {
@@ -61,10 +68,10 @@ export default function App() {
       
       {/* نیویگیشن ٹیبز (Navigation Header) */}
       <div className="bg-slate-900 text-white p-3 shadow-md border-b border-slate-800 sticky top-0 z-50">
-        <div className="max-w-4xl mx-auto flex flex-wrap justify-center gap-2">
+        <div className="max-w-5xl mx-auto flex flex-wrap justify-center gap-2">
           <button
             onClick={() => setActiveTab('production')}
-            className={`px-4 py-2 rounded-xl text-xs md:text-sm font-bold transition-all ${
+            className={`px-3 py-2 rounded-xl text-xs md:text-sm font-bold transition-all ${
               activeTab === 'production'
                 ? 'bg-indigo-600 text-white shadow-lg border border-indigo-400'
                 : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
@@ -75,7 +82,7 @@ export default function App() {
           
           <button
             onClick={() => setActiveTab('inventory')}
-            className={`px-4 py-2 rounded-xl text-xs md:text-sm font-bold transition-all ${
+            className={`px-3 py-2 rounded-xl text-xs md:text-sm font-bold transition-all ${
               activeTab === 'inventory'
                 ? 'bg-indigo-600 text-white shadow-lg border border-indigo-400'
                 : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
@@ -86,13 +93,24 @@ export default function App() {
 
           <button
             onClick={() => setActiveTab('finished')}
-            className={`px-4 py-2 rounded-xl text-xs md:text-sm font-bold transition-all ${
+            className={`px-3 py-2 rounded-xl text-xs md:text-sm font-bold transition-all ${
               activeTab === 'finished'
                 ? 'bg-indigo-600 text-white shadow-lg border border-indigo-400'
                 : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
             }`}
           >
-            📦 3. تیار شدہ مال (گودام)
+            📦 3. تیار شدہ مال
+          </button>
+
+          <button
+            onClick={() => setActiveTab('payroll')}
+            className={`px-3 py-2 rounded-xl text-xs md:text-sm font-bold transition-all ${
+              activeTab === 'payroll'
+                ? 'bg-indigo-600 text-white shadow-lg border border-indigo-400'
+                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+            }`}
+          >
+            💰 4. کاریگر و اجرت
           </button>
         </div>
       </div>
@@ -134,9 +152,9 @@ export default function App() {
                     onChange={handleChange}
                     className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl"
                   >
-                    <option value="">کاریگر منتخب کریں...</option>
-                    <option value="EMP-101">محمد علی (EMP-101)</option>
-                    <option value="EMP-102">عثمان خان (EMP-102)</option>
+                    {workers.map((w) => (
+                      <option key={w.id} value={w.id}>{w.name} ({w.id})</option>
+                    ))}
                   </select>
                 </div>
 
@@ -325,7 +343,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* گودام اسٹاک ٹیبل / کارڈز */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {finishedStock.map((stock) => (
                 <div key={stock.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
@@ -358,30 +375,63 @@ export default function App() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
 
-            {/* نیا کارٹن / گودام انٹری فارم */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-              <h3 className="text-lg font-bold text-slate-800 border-b pb-2">گودام میں نیا اسٹاک شامل کریں</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">آئٹم / کوالٹی</label>
-                  <input type="text" placeholder="کاٹن نٹڈ Grade A" className="w-full p-3 bg-slate-50 border rounded-xl" />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">کارٹن کی تعداد</label>
-                  <input type="number" placeholder="10" className="w-full p-3 bg-slate-50 border rounded-xl" />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">فی کارٹن (درجن)</label>
-                  <input type="number" placeholder="20" className="w-full p-3 bg-slate-50 border rounded-xl" />
-                </div>
+        {/* ================= tab 4: کاریگر اور اجرت (Payroll) ================= */}
+        {activeTab === 'payroll' && (
+          <div className="max-w-4xl mx-auto space-y-6">
+            <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-lg flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-bold">کاریگروں کی روزانہ کی اجرت (Piece-Rate Payroll)</h2>
+                <p className="text-slate-400 text-sm mt-1">فی درجن ریٹ اور نیٹ ادائیگی کا حساب</p>
               </div>
-              <button className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md">
-                گودام اسٹاک اپڈیٹ کریں
-              </button>
+            </div>
+
+            {/* کاریگروں کے اجرت کارڈز */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {workers.map((worker) => {
+                const totalGrossWage = worker.dozensMadeToday * worker.ratePerDozen;
+                const netPayable = totalGrossWage - worker.advance;
+
+                return (
+                  <div key={worker.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                    <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                      <div>
+                        <h3 className="font-bold text-slate-800 text-lg">{worker.name}</h3>
+                        <span className="text-xs text-slate-400 font-mono">{worker.id}</span>
+                      </div>
+                      <span className="bg-indigo-50 text-indigo-700 text-xs px-2.5 py-1 rounded-lg font-bold border border-indigo-100">
+                        {worker.ratePerDozen} روپے/درجن
+                      </span>
+                    </div>
+
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between text-slate-600">
+                        <span>آج کی پروڈکشن:</span>
+                        <span className="font-bold text-slate-800">{worker.dozensMadeToday} درجن</span>
+                      </div>
+                      <div className="flex justify-between text-slate-600">
+                        <span>کل اجرت (Gross):</span>
+                        <span className="font-bold text-slate-800">{totalGrossWage} روپے</span>
+                      </div>
+                      <div className="flex justify-between text-rose-600">
+                        <span>ایڈوانس کٹوتی:</span>
+                        <span className="font-bold">-{worker.advance} روپے</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-200 flex justify-between items-center">
+                      <span className="text-xs font-bold text-emerald-800">قابلِ ادائیگی (Net Pay):</span>
+                      <span className="text-xl font-black text-emerald-700">{netPayable} روپے</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
+
       </div>
     </div>
   );

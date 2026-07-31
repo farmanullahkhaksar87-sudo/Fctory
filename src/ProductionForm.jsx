@@ -7,7 +7,7 @@ export default function App() {
   const [formData, setFormData] = useState({
     batchNumber: 'BATCH-2026-081',
     workerName: 'EMP-101',
-    gloveType: 'cotton_knitted',
+    gloveType: 'wool_half',
     size: 'L',
     dozensProduced: '',
     dozensDefective: 0,
@@ -18,9 +18,9 @@ export default function App() {
 
   // 2. دھاگا انوینٹری
   const [threads] = useState([
-    { id: 1, name: '20/2 کاٹن تھریڈ (White)', bags: 10, weightPerBagKg: 45, minLimitBags: 3 },
-    { id: 2, name: 'کیولر کٹ ریسسٹنٹ (Kevlar)', bags: 2, weightPerBagKg: 40, minLimitBags: 2 },
-    { id: 3, name: 'نائلون تھریڈ (High Tenacity)', bags: 6, weightPerBagKg: 50, minLimitBags: 2 },
+    { id: 1, name: 'وولن تھریڈ / دھاگا', bags: 10, weightPerBagKg: 45, minLimitBags: 3 },
+    { id: 2, name: 'اکریلک تھریڈ', bags: 5, weightPerBagKg: 40, minLimitBags: 2 },
+    { id: 3, name: 'اسپینڈیکس / الیکٹرا', bags: 4, weightPerBagKg: 25, minLimitBags: 1 },
   ]);
 
   // AI تخمینہ
@@ -33,14 +33,13 @@ export default function App() {
 
   // 3. تیار شدہ مال (Finished Goods Stock)
   const [finishedStock] = useState([
-    { id: 1, item: 'کاٹن نٹڈ ہینڈ گلوز (Grade A)', size: 'L', cartons: 25, dozensPerCarton: 20, totalDozens: 500 },
-    { id: 2, item: 'کاٹن نٹڈ ہینڈ گلوز (Grade A)', size: 'M', cartons: 18, dozensPerCarton: 20, totalDozens: 360 },
-    { id: 3, item: 'لیٹیکس کوٹڈ گلوز (Grade A)', size: 'XL', cartons: 10, dozensPerCarton: 15, totalDozens: 150 },
-    { id: 4, item: 'مکسڈ بی گریڈ دستانے (Grade B)', size: 'Free Size', cartons: 8, dozensPerCarton: 25, totalDozens: 200 },
+    { id: 1, item: 'وول ہاف (Grade A)', size: 'L', cartons: 25, dozensPerCarton: 20, totalDozens: 500 },
+    { id: 2, item: 'وول فل (Grade A)', size: 'M', cartons: 18, dozensPerCarton: 20, totalDozens: 360 },
+    { id: 3, item: 'یونیفارم گلوز (Grade A)', size: 'L', cartons: 10, dozensPerCarton: 15, totalDozens: 150 },
   ]);
 
   // 4. کاریگر اور اجرت (Payroll)
-  const [workers, setWorkers] = useState([
+  const [workers] = useState([
     { id: 'EMP-101', name: 'محمد علی', ratePerDozen: 80, dozensMadeToday: 25, advance: 500 },
     { id: 'EMP-102', name: 'عثمان خان', ratePerDozen: 85, dozensMadeToday: 30, advance: 0 },
     { id: 'EMP-103', name: 'طارق محمود', ratePerDozen: 80, dozensMadeToday: 20, advance: 200 },
@@ -52,7 +51,7 @@ export default function App() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setSuccessMessage('روزانہ کی پروڈکشن کا اندراج کامیا بی سے ہو گیا ہے!');
+    setSuccessMessage('روزانہ کی پروڈکشن کا اندراج کامیابی سے ہو گیا ہے!');
     setTimeout(() => setSuccessMessage(''), 3000);
   };
 
@@ -164,11 +163,11 @@ export default function App() {
                     name="gloveType"
                     value={formData.gloveType}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl"
+                    className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl font-bold text-slate-800"
                   >
-                    <option value="cotton_knitted">کاٹن نٹڈ (Cotton Knitted)</option>
-                    <option value="coated_dipped">لیٹیکس کوٹڈ (Dipped Latex)</option>
-                    <option value="cut_resistant">کٹ ریسسٹنٹ (Cut Resistant)</option>
+                    <option value="wool_half">وول ہاف (Wool Half)</option>
+                    <option value="wool_full">وول فل (Wool Full)</option>
+                    <option value="uniform">یونیفارم (Uniform)</option>
                   </select>
                 </div>
 
@@ -343,7 +342,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {finishedStock.map((stock) => (
                 <div key={stock.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
                   <div className="flex justify-between items-start">
@@ -388,7 +387,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* کاریگروں کے اجرت کارڈز */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {workers.map((worker) => {
                 const totalGrossWage = worker.dozensMadeToday * worker.ratePerDozen;

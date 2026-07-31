@@ -1,33 +1,35 @@
 import React, { useState } from 'react';
 
 export default function App() {
-  // فعال ٹیب (Tab State): 'production' یا 'inventory'
   const [activeTab, setActiveTab] = useState('production');
 
-  // پروڈکشن فارم اسٹیٹ
+  // پروڈکشن فارم (درجنوں کے حساب سے)
   const [formData, setFormData] = useState({
     batchNumber: 'BATCH-2026-081',
     workerName: '',
     gloveType: 'cotton_knitted',
     size: 'L',
-    pairsProduced: '',
-    pairsDefective: 0,
+    dozensProduced: '',
+    dozensDefective: 0,
     machineId: '',
   });
 
   const [successMessage, setSuccessMessage] = useState('');
 
-  // تھریڈ انوینٹری ڈیٹا
+  // دھاگا انوینٹری (بوروں اور وزن کے حساب سے)
   const [threads] = useState([
-    { id: 1, name: '20/2 کاٹن تھریڈ (White)', cones: 120, weightPerCone: 1.2, minLimit: 50 },
-    { id: 2, name: 'کیولر کٹ ریسسٹنٹ (Kevlar)', cones: 15, weightPerCone: 1.0, minLimit: 30 },
-    { id: 3, name: 'نائلون تھریڈ (High Tenacity)', cones: 85, weightPerCone: 0.8, minLimit: 25 },
+    { id: 1, name: '20/2 کاٹن تھریڈ (White)', bags: 10, weightPerBagKg: 45, minLimitBags: 3 },
+    { id: 2, name: 'کیولر کٹ ریسسٹنٹ (Kevlar)', bags: 2, weightPerBagKg: 40, minLimitBags: 2 },
+    { id: 3, name: 'نائلون تھریڈ (High Tenacity)', bags: 6, weightPerBagKg: 50, minLimitBags: 2 },
   ]);
 
-  // AI تخمینہ
-  const [pairsToEstimate, setPairsToEstimate] = useState(1000);
-  const [gramsPerPair, setGramsPerPair] = useState(45);
-  const totalRequiredKg = ((pairsToEstimate * gramsPerPair) / 1000).toFixed(2);
+  // AI تخمینہ (درجنوں سے بوروں کا حساب)
+  const [dozensToEstimate, setDozensToEstimate] = useState(100);
+  const [gramsPerDozen, setGramsPerDozen] = useState(540); // 45g per pair * 12 = 540g per dozen
+  const [bagWeightKg, setBagWeightKg] = useState(45);
+
+  const totalRequiredKg = ((dozensToEstimate * gramsPerDozen) / 1000).toFixed(1);
+  const totalBagsNeeded = (totalRequiredKg / bagWeightKg).toFixed(1);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -39,15 +41,15 @@ export default function App() {
     setTimeout(() => setSuccessMessage(''), 3000);
   };
 
-  const netGradeAPairs = Math.max(
+  const netGradeADozens = Math.max(
     0,
-    (parseInt(formData.pairsProduced) || 0) - (parseInt(formData.pairsDefective) || 0)
+    (parseFloat(formData.dozensProduced) || 0) - (parseFloat(formData.dozensDefective) || 0)
   );
 
   return (
     <div className="min-h-screen bg-slate-100 font-sans" dir="rtl">
       
-      {/* 🔴 اہم: نیویگیشن ٹیبز (Navigation Header) */}
+      {/* نیویگیشن ٹیبز */}
       <div className="bg-slate-900 text-white p-3 shadow-md border-b border-slate-800 sticky top-0 z-50">
         <div className="max-w-4xl mx-auto flex justify-center gap-3">
           <button
@@ -58,7 +60,7 @@ export default function App() {
                 : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
             }`}
           >
-            📋 1. پروڈکشن فارم
+            📋 1. پروڈکشن (درجن)
           </button>
           
           <button
@@ -69,7 +71,7 @@ export default function App() {
                 : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
             }`}
           >
-            🧵 2. تھریڈ انوینٹری
+            🧵 2. دھاگا اسٹاک (بہرے)
           </button>
         </div>
       </div>
@@ -80,7 +82,7 @@ export default function App() {
           <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
             <div className="bg-indigo-700 p-6 text-white text-right">
               <h2 className="text-2xl font-bold">روزانہ کی پروڈکشن کا اندراج</h2>
-              <p className="text-indigo-200 text-sm mt-1">دستانوں کی تیاری اور ڈیفیکٹس کی تفصیلات درج کریں</p>
+              <p className="text-indigo-200 text-sm mt-1">دستانوں کی تیاری درجنوں کے حساب سے درج کریں</p>
             </div>
 
             {successMessage && (
@@ -150,26 +152,28 @@ export default function App() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">کل تیار کردہ جوڑے</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">کل تیار شدہ مال (درجن)</label>
                   <input
                     type="number"
-                    name="pairsProduced"
-                    value={formData.pairsProduced}
+                    step="0.5"
+                    name="dozensProduced"
+                    value={formData.dozensProduced}
                     onChange={handleChange}
-                    placeholder="120"
-                    className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl font-bold"
+                    placeholder="10"
+                    className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl font-bold text-lg"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">خراب / ڈیفیکٹو جوڑے</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">خراب / ڈیفیکٹ (درجن)</label>
                   <input
                     type="number"
-                    name="pairsDefective"
-                    value={formData.pairsDefective}
+                    step="0.5"
+                    name="dozensDefective"
+                    value={formData.dozensDefective}
                     onChange={handleChange}
                     placeholder="0"
-                    className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl font-bold text-rose-600"
+                    className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl font-bold text-rose-600 text-lg"
                   />
                 </div>
               </div>
@@ -177,13 +181,13 @@ export default function App() {
               <div className="bg-slate-50 p-4 rounded-xl border flex justify-between items-center">
                 <div>
                   <span className="text-xs text-slate-500 block">کوالٹی مال (Grade A)</span>
-                  <span className="text-2xl font-black text-emerald-600">{netGradeAPairs} جوڑے</span>
+                  <span className="text-2xl font-black text-emerald-600">{netGradeADozens} درجن</span>
                 </div>
                 <div className="text-left">
                   <span className="text-xs text-slate-500 block">ڈیفیکٹ %</span>
                   <span className="text-sm font-bold text-rose-500">
-                    {formData.pairsProduced > 0
-                      ? ((formData.pairsDefective / formData.pairsProduced) * 100).toFixed(1)
+                    {formData.dozensProduced > 0
+                      ? ((formData.dozensDefective / formData.dozensProduced) * 100).toFixed(1)
                       : 0}%
                   </span>
                 </div>
@@ -199,13 +203,13 @@ export default function App() {
           </div>
         )}
 
-        {/* ================= tab 2: تھریڈ انوینٹری ================= */}
+        {/* ================= tab 2: دھاگا انوینٹری ================= */}
         {activeTab === 'inventory' && (
           <div className="max-w-4xl mx-auto space-y-6">
             <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-lg flex justify-between items-center">
               <div>
                 <h2 className="text-2xl font-bold">دھاگہ اور خام مال انوینٹری</h2>
-                <p className="text-slate-400 text-sm mt-1">موجودہ اسٹاک اور الرٹس</p>
+                <p className="text-slate-400 text-sm mt-1">گودام میں موجود بوریوں اور وزن کا حساب</p>
               </div>
               <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-semibold">
                 لائیو اسٹاک
@@ -214,8 +218,8 @@ export default function App() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {threads.map((item) => {
-                const totalKg = (item.cones * item.weightPerCone).toFixed(1);
-                const isLowStock = item.cones <= item.minLimit;
+                const totalKg = item.bags * item.weightPerBagKg;
+                const isLowStock = item.bags <= item.minLimitBags;
                 return (
                   <div
                     key={item.id}
@@ -233,11 +237,11 @@ export default function App() {
                     </div>
                     <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-100">
                       <div>
-                        <span className="text-xs text-slate-500 block">کل کون (Cones)</span>
-                        <span className="text-xl font-black text-slate-800">{item.cones}</span>
+                        <span className="text-xs text-slate-500 block">کل بورے (Bags)</span>
+                        <span className="text-xl font-black text-slate-800">{item.bags} بورے</span>
                       </div>
                       <div>
-                        <span className="text-xs text-slate-500 block">کل وزن (kg)</span>
+                        <span className="text-xs text-slate-500 block">کل وزن (کلوگرام)</span>
                         <span className="text-xl font-black text-indigo-600">{totalKg} kg</span>
                       </div>
                     </div>
@@ -246,30 +250,41 @@ export default function App() {
               })}
             </div>
 
+            {/* AI تخمینہ کیلکولیٹر */}
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-              <h3 className="text-lg font-bold text-slate-800 border-b pb-2">دھاگے کی ضرورت کا تخمینہ (AI Estimator)</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <h3 className="text-lg font-bold text-slate-800 border-b pb-2">دھاگے کی بوریوں کا تخمینہ (Estimator)</h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">دستانوں کے جوڑے</label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">ٹارگٹ (درجن)</label>
                   <input
                     type="number"
-                    value={pairsToEstimate}
-                    onChange={(e) => setPairsToEstimate(e.target.value)}
-                    className="w-full p-3 bg-slate-50 border rounded-xl font-bold"
+                    value={dozensToEstimate}
+                    onChange={(e) => setDozensToEstimate(e.target.value)}
+                    className="w-full p-3 bg-slate-50 border rounded-xl font-bold text-slate-800"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">فی جوڑ دھاگا (گرام)</label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">فی درجن دھاگا (گرام)</label>
                   <input
                     type="number"
-                    value={gramsPerPair}
-                    onChange={(e) => setGramsPerPair(e.target.value)}
-                    className="w-full p-3 bg-slate-50 border rounded-xl font-bold"
+                    value={gramsPerDozen}
+                    onChange={(e) => setGramsPerDozen(e.target.value)}
+                    className="w-full p-3 bg-slate-50 border rounded-xl font-bold text-slate-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">بوری کا وزن (kg)</label>
+                  <input
+                    type="number"
+                    value={bagWeightKg}
+                    onChange={(e) => setBagWeightKg(e.target.value)}
+                    className="w-full p-3 bg-slate-50 border rounded-xl font-bold text-slate-800"
                   />
                 </div>
                 <div className="bg-indigo-50 p-3 rounded-xl border border-indigo-100 text-center flex flex-col justify-center">
-                  <span className="text-xs text-indigo-600 font-semibold">کل درکار دھاگا</span>
-                  <span className="text-2xl font-black text-indigo-700">{totalRequiredKg} kg</span>
+                  <span className="text-xs text-indigo-600 font-semibold">درکار دھاگا</span>
+                  <span className="text-lg font-black text-indigo-700">{totalRequiredKg} kg</span>
+                  <span className="text-xs font-bold text-indigo-500">({totalBagsNeeded} بورے)</span>
                 </div>
               </div>
             </div>

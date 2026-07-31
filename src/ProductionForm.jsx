@@ -3,9 +3,12 @@ import React, { useState } from 'react';
 export default function App() {
   const [activeTab, setActiveTab] = useState('production');
 
+  // آج کی تاریخ تاریخ فارمیٹ (YYYY-MM-DD) میں حاصل کرنے کا طریقہ
+  const todayDate = new Date().toISOString().split('T')[0];
+
   // 1. پروڈکشن فارم اسٹیٹ
   const [formData, setFormData] = useState({
-    batchNumber: 'BATCH-2026-081',
+    productionDate: todayDate,
     workerName: 'EMP-101',
     gloveType: 'wool_half',
     size: 'L',
@@ -62,54 +65,68 @@ export default function App() {
 
   const totalWarehouseDozens = finishedStock.reduce((acc, curr) => acc + curr.totalDozens, 0);
 
+  // پرنٹ کا طریقہ
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <div className="min-h-screen bg-slate-100 font-sans" dir="rtl">
       
-      {/* نیویگیشن ٹیبز (Navigation Header) */}
-      <div className="bg-slate-900 text-white p-3 shadow-md border-b border-slate-800 sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto flex flex-wrap justify-center gap-2">
-          <button
-            onClick={() => setActiveTab('production')}
-            className={`px-3 py-2 rounded-xl text-xs md:text-sm font-bold transition-all ${
-              activeTab === 'production'
-                ? 'bg-indigo-600 text-white shadow-lg border border-indigo-400'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-            }`}
-          >
-            📋 1. پروڈکشن
-          </button>
-          
-          <button
-            onClick={() => setActiveTab('inventory')}
-            className={`px-3 py-2 rounded-xl text-xs md:text-sm font-bold transition-all ${
-              activeTab === 'inventory'
-                ? 'bg-indigo-600 text-white shadow-lg border border-indigo-400'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-            }`}
-          >
-            🧵 2. دھاگا اسٹاک
-          </button>
+      {/* نیویگیشن ٹیبز (Navigation Header) - پرنٹ کے دوران غائب ہو جائے گا */}
+      <div className="bg-slate-900 text-white p-3 shadow-md border-b border-slate-800 sticky top-0 z-50 print:hidden">
+        <div className="max-w-5xl mx-auto flex flex-wrap justify-between items-center gap-2">
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setActiveTab('production')}
+              className={`px-3 py-2 rounded-xl text-xs md:text-sm font-bold transition-all ${
+                activeTab === 'production'
+                  ? 'bg-indigo-600 text-white shadow-lg border border-indigo-400'
+                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              📋 1. پروڈکشن
+            </button>
+            
+            <button
+              onClick={() => setActiveTab('inventory')}
+              className={`px-3 py-2 rounded-xl text-xs md:text-sm font-bold transition-all ${
+                activeTab === 'inventory'
+                  ? 'bg-indigo-600 text-white shadow-lg border border-indigo-400'
+                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              🧵 2. دھاگا اسٹاک
+            </button>
+
+            <button
+              onClick={() => setActiveTab('finished')}
+              className={`px-3 py-2 rounded-xl text-xs md:text-sm font-bold transition-all ${
+                activeTab === 'finished'
+                  ? 'bg-indigo-600 text-white shadow-lg border border-indigo-400'
+                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              📦 3. تیار شدہ مال
+            </button>
+
+            <button
+              onClick={() => setActiveTab('payroll')}
+              className={`px-3 py-2 rounded-xl text-xs md:text-sm font-bold transition-all ${
+                activeTab === 'payroll'
+                  ? 'bg-indigo-600 text-white shadow-lg border border-indigo-400'
+                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              💰 4. کاریگر و اجرت
+            </button>
+          </div>
 
           <button
-            onClick={() => setActiveTab('finished')}
-            className={`px-3 py-2 rounded-xl text-xs md:text-sm font-bold transition-all ${
-              activeTab === 'finished'
-                ? 'bg-indigo-600 text-white shadow-lg border border-indigo-400'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-            }`}
+            onClick={handlePrint}
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs md:text-sm rounded-xl shadow border border-emerald-400 flex items-center gap-1"
           >
-            📦 3. تیار شدہ مال
-          </button>
-
-          <button
-            onClick={() => setActiveTab('payroll')}
-            className={`px-3 py-2 rounded-xl text-xs md:text-sm font-bold transition-all ${
-              activeTab === 'payroll'
-                ? 'bg-indigo-600 text-white shadow-lg border border-indigo-400'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-            }`}
-          >
-            💰 4. کاریگر و اجرت
+            🖨️ پرنٹ رپورٹ
           </button>
         </div>
       </div>
@@ -118,13 +135,21 @@ export default function App() {
         {/* ================= tab 1: پروڈکشن فارم ================= */}
         {activeTab === 'production' && (
           <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
-            <div className="bg-indigo-700 p-6 text-white text-right">
-              <h2 className="text-2xl font-bold">روزانہ کی پروڈکشن کا اندراج</h2>
-              <p className="text-indigo-200 text-sm mt-1">دستانوں کی تیاری درجنوں کے حساب سے درج کریں</p>
+            <div className="bg-indigo-700 p-6 text-white text-right flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-bold">روزانہ کی پروڈکشن کا اندراج</h2>
+                <p className="text-indigo-200 text-sm mt-1">دستانوں کی تیاری درجنوں کے حساب سے درج کریں</p>
+              </div>
+              <button
+                onClick={handlePrint}
+                className="hidden print:hidden md:flex px-3 py-1.5 bg-indigo-800 hover:bg-indigo-900 text-white font-bold text-xs rounded-lg border border-indigo-500 items-center gap-1"
+              >
+                🖨️ پرنٹ
+              </button>
             </div>
 
             {successMessage && (
-              <div className="m-6 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl font-bold">
+              <div className="m-6 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl font-bold print:hidden">
                 {successMessage}
               </div>
             )}
@@ -132,14 +157,13 @@ export default function App() {
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">بیچ نمبر (Batch Number)</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">تاریخ (Date)</label>
                   <input
-                    type="text"
-                    name="batchNumber"
-                    value={formData.batchNumber}
+                    type="date"
+                    name="productionDate"
+                    value={formData.productionDate}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl font-mono text-left"
-                    dir="ltr"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-slate-800"
                   />
                 </div>
 
@@ -233,7 +257,7 @@ export default function App() {
 
               <button
                 type="submit"
-                className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-lg rounded-xl shadow-lg"
+                className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-lg rounded-xl shadow-lg print:hidden"
               >
                 پروڈکشن محفوظ کریں
               </button>
@@ -246,12 +270,15 @@ export default function App() {
           <div className="max-w-4xl mx-auto space-y-6">
             <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-lg flex justify-between items-center">
               <div>
-                <h2 className="text-2xl font-bold">دھاگہ اور خام مال انوینٹری</h2>
-                <p className="text-slate-400 text-sm mt-1">گودام میں موجود بوریوں اور وزن کا حساب</p>
+                <h2 className="text-2xl font-bold">دھاگہ اور خام مال انوینٹری Report</h2>
+                <p className="text-slate-400 text-sm mt-1">گودام میں موجود بوریوں اور وزن کا حساب ({todayDate})</p>
               </div>
-              <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-semibold">
-                لائیو اسٹاک
-              </span>
+              <button
+                onClick={handlePrint}
+                className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl border border-emerald-400 print:hidden"
+              >
+                🖨️ پرنٹ
+              </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -268,7 +295,7 @@ export default function App() {
                     <div className="flex justify-between items-start mb-3">
                       <h3 className="font-bold text-slate-800 text-lg">{item.name}</h3>
                       {isLowStock && (
-                        <span className="bg-rose-100 text-rose-700 text-xs px-2 py-0.5 rounded-full font-bold">
+                        <span className="bg-rose-100 text-rose-700 text-xs px-2 py-0.5 rounded-full font-bold print:hidden">
                           کم اسٹاک!
                         </span>
                       )}
@@ -333,12 +360,20 @@ export default function App() {
           <div className="max-w-4xl mx-auto space-y-6">
             <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-lg flex justify-between items-center">
               <div>
-                <h2 className="text-2xl font-bold">تیار شدہ مال کا گودام</h2>
-                <p className="text-slate-400 text-sm mt-1">پیکنگ، کارٹن اور درجنوں کا مکمل اسٹاک</p>
+                <h2 className="text-2xl font-bold">تیار شدہ مال کا گودام Report</h2>
+                <p className="text-slate-400 text-sm mt-1">پیکنگ، کارٹن اور درجنوں کا مکمل اسٹاک ({todayDate})</p>
               </div>
-              <div className="text-left bg-indigo-600/30 border border-indigo-500/40 px-4 py-2 rounded-xl">
-                <span className="text-xs text-indigo-200 block">کل گودام اسٹاک</span>
-                <span className="text-xl font-black text-white">{totalWarehouseDozens} درجن</span>
+              <div className="flex items-center gap-3">
+                <div className="text-left bg-indigo-600/30 border border-indigo-500/40 px-4 py-2 rounded-xl">
+                  <span className="text-xs text-indigo-200 block">کل گودام اسٹاک</span>
+                  <span className="text-xl font-black text-white">{totalWarehouseDozens} درجن</span>
+                </div>
+                <button
+                  onClick={handlePrint}
+                  className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl border border-emerald-400 print:hidden"
+                >
+                  🖨️ پرنٹ
+                </button>
               </div>
             </div>
 
@@ -352,7 +387,7 @@ export default function App() {
                         سائز: {stock.size}
                       </span>
                     </div>
-                    <span className="bg-emerald-100 text-emerald-800 text-xs px-2 py-1 rounded-lg font-bold">
+                    <span className="bg-emerald-100 text-emerald-800 text-xs px-2 py-1 rounded-lg font-bold print:hidden">
                       موجود ہے
                     </span>
                   </div>
@@ -382,9 +417,15 @@ export default function App() {
           <div className="max-w-4xl mx-auto space-y-6">
             <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-lg flex justify-between items-center">
               <div>
-                <h2 className="text-2xl font-bold">کاریگروں کی روزانہ کی اجرت (Piece-Rate Payroll)</h2>
-                <p className="text-slate-400 text-sm mt-1">فی درجن ریٹ اور نیٹ ادائیگی کا حساب</p>
+                <h2 className="text-2xl font-bold">کاریگروں کی روزانہ کی اجرت Report</h2>
+                <p className="text-slate-400 text-sm mt-1">فی درجن ریٹ اور نیٹ ادائیگی کا حساب ({todayDate})</p>
               </div>
+              <button
+                onClick={handlePrint}
+                className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl border border-emerald-400 print:hidden"
+              >
+                🖨️ پرنٹ
+              </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

@@ -1,9 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { db } from './firebase';
+import { 
+  collection, 
+  onSnapshot, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  doc 
+} from 'firebase/firestore';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('production');
-
-  // آج کی تاریخ فارمیٹ (YYYY-MM-DD) میں
+  const [activeTab, setActiveTab] = useState('inventory');
   const todayDate = new Date().toISOString().split('T')[0];
 
   // 1. پروڈکشن فارم اسٹیٹ
@@ -18,18 +25,30 @@ export default function App() {
 
   const [successMessage, setSuccessMessage] = useState('');
 
-  // 2. دھاگا انوینٹری
-  const [threads] = useState([
-    { id: 1, name: 'وولن تھریڈ / دھاگا', bags: 10, weightPerBagKg: 45, minLimitBags: 3 },
-    { id: 2, name: 'اکریلک تھریڈ', bags: 5, weightPerBagKg: 40, minLimitBags: 2 },
-    { id: 3, name: 'اسپینڈیکس / الیکٹرا', bags: 4, weightPerBagKg: 25, minLimitBags: 1 },
+  // 2. گودام کا ابتدائی خام مال (Total Received Raw Material Stock)
+  const [initialThreads] = useState([
+    { id: 't1', name: 'وولن تھریڈ / دھاگا', initialBags: 10, weightPerBagKg: 45, minLimitBags: 3 },
+    { id: 't2', name: 'اکریلک تھریڈ', initialBags: 5, weightPerBagKg: 40, minLimitBags: 2 },
+    { id: 't3', name: 'اسپینڈیکس / الیکٹرا', initialBags: 4, weightPerBagKg: 25, minLimitBags: 1 },
   ]);
 
-  // فیکٹری کو جاری کردہ دھاگے کا ریکارڈ (Thread Issue Log State)
-  const [issuedThreads, setIssuedThreads] = useState([
-    { id: 1, date: todayDate, threadName: 'وولن تھریڈ / دھاگا', bags: 2, weightKg: 90 },
-    { id: 2, date: todayDate, threadName: 'اکریلک تھریڈ', bags: 1, weightKg: 40 },
-  ]);
+  // آن لائن فائر بیس ڈیٹابیس سے جاری شدہ دھاگے کا ریکارڈ
+  const [issuedThreads, setIssuedThreads] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Firebase سے لائیو (Realtime Data Sync)
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, "issuedThreads"), (snapshot) => {
+      const threadsList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setIssuedThreads(threadsList);
+      setLoading(false);
+    });
+
+    return () => unsub();
+  }, []);
 
   const [issueForm, setIssueForm] = useState({
     date: todayDate,
@@ -38,7 +57,7 @@ export default function App() {
     weightKg: '',
   });
 
-  const [editingId, setEditingId] = useState(null); // ایڈیٹ کے لیے ID ٹریکنگ
+  const [editingId, setEditingId] = useState(null);
   const [issueSuccess, setIssueSuccess] = useState('');
 
   // 3. تیار شدہ مال (Finished Goods Stock)
@@ -65,50 +84,45 @@ export default function App() {
     setTimeout(() => setSuccessMessage(''), 3000);
   };
 
-  // دھاگا ایشو فارم ہینڈلرز (اضافہ اور ایڈیٹ)
   const handleIssueChange = (e) => {
     setIssueForm({ ...issueForm, [e.target.name]: e.target.value });
   };
 
-  const handleIssueSubmit = (e) => {
+  // کلاؤڈ میں محفوظ کرنے کی لاجک
+  const handleIssueSubmit = async (e) => {
     e.preventDefault();
     if (!issueForm.bags || !issueForm.weightKg) return;
 
-    if (editingId !== null) {
-      // ایڈیٹ شدہ ریکارڈ اپڈیٹ کریں
-      setIssuedThreads(
-        issuedThreads.map((item) =>
-          item.id === editingId
-            ? {
-                ...item,
-                date: issueForm.date,
-                threadName: issueForm.threadName,
-                bags: parseFloat(issueForm.bags),
-                weightKg: parseFloat(issueForm.weightKg),
-              }
-            : item
-        )
-      );
-      setIssueSuccess('ریکارڈ میں کامیابی سے تبدیلی کر دی گئی ہے!');
-      setEditingId(null);
-    } else {
-      // نیا ریکارڈ شامل کریں
-      const newEntry = {
-        id: Date.now(),
-        date: issueForm.date,
-        threadName: issueForm.threadName,
-        bags: parseFloat(issueForm.bags),
-        weightKg: parseFloat(issueForm.weightKg),
-      };
-      setIssuedThreads([newEntry, ...issuedThreads]);
-      setIssueSuccess('فیکٹری کے لیے دھاگے کا ریکارڈ کامیابی سے محفوظ ہو گیا!');
-    }
+    try {
+      if (editingId !== null) {
+        const docRef = doc(db, "issuedThreads", editingId);
+        await updateDoc(docRef, {
+          date: issueForm.date,
+          threadName: issueForm.threadName,
+          bags: parseFloat(issueForm.bags),
+          weightKg: parseFloat(issueForm.weightKg),
+        });
+        setIssueSuccess('آن لائن ریکارڈ تبدیل کر دیا گیا!');
+        setEditingId(null);
+      } else {
+        await addDoc(collection(db, "issuedThreads"), {
+          date: issueForm.date,
+          threadName: issueForm.threadName,
+          bags: parseFloat(issueForm.bags),
+          weightKg: parseFloat(issueForm.weightKg),
+          createdAt: Date.now()
+        });
+        setIssueSuccess('نیا جاری کردہ دھاگا کلاؤڈ میں سیو ہو گیا اور اسٹاک سے مائنس ہو گیا!');
+      }
 
-    setIssueForm({ date: todayDate, threadName: 'وولن تھریڈ / دھاگا', bags: '', weightKg: '' });
-    setTimeout(() => setIssueSuccess(''), 3000);
+      setIssueForm({ date: todayDate, threadName: 'وولن تھریڈ / دھاگا', bags: '', weightKg: '' });
+      setTimeout(() => setIssueSuccess(''), 3000);
+    } catch (error) {
+      console.error("Error saving data: ", error);
+      alert("ڈیٹا سیو کرتے ہوئے کوئی مسئلہ آیا ہے۔");
+    }
   };
 
-  // ریکارڈ ایڈیٹ کرنے کا عمل
   const handleEdit = (item) => {
     setEditingId(item.id);
     setIssueForm({
@@ -119,13 +133,16 @@ export default function App() {
     });
   };
 
-  // ریکارڈ ڈیلیٹ کرنے کا عمل
-  const handleDelete = (id) => {
-    if (window.confirm('کیا آپ واقعی اس ریکارڈ کو ختم کرنا چاہتے ہیں؟')) {
-      setIssuedThreads(issuedThreads.filter((item) => item.id !== id));
-      if (editingId === id) {
-        setEditingId(null);
-        setIssueForm({ date: todayDate, threadName: 'وولن تھریڈ / دھاگا', bags: '', weightKg: '' });
+  const handleDelete = async (id) => {
+    if (window.confirm('کیا آپ واقعی اس جاری کردہ ریکارڈ کو ختم کرنا چاہتے ہیں؟ (اس سے اسٹاک واپس بڑھ جائے گا)')) {
+      try {
+        await deleteDoc(doc(db, "issuedThreads", id));
+        if (editingId === id) {
+          setEditingId(null);
+          setIssueForm({ date: todayDate, threadName: 'وولن تھریڈ / دھاگا', bags: '', weightKg: '' });
+        }
+      } catch (error) {
+        console.error("Error deleting doc: ", error);
       }
     }
   };
@@ -137,15 +154,25 @@ export default function App() {
 
   const totalWarehouseDozens = finishedStock.reduce((acc, curr) => acc + curr.totalDozens, 0);
 
-  // پرنٹ کا طریقہ
   const handlePrint = () => {
     window.print();
+  };
+
+  // ----------------------------------------------------
+  // مائنس کرنے کا خودکار حساب (Automated Deductions Logic)
+  // ----------------------------------------------------
+  const calculateRemainingStock = (threadName) => {
+    const issuedForThisThread = issuedThreads.filter(t => t.threadName === threadName);
+    const totalIssuedBags = issuedForThisThread.reduce((sum, item) => sum + (parseFloat(item.bags) || 0), 0);
+    const totalIssuedWeight = issuedForThisThread.reduce((sum, item) => sum + (parseFloat(item.weightKg) || 0), 0);
+
+    return { totalIssuedBags, totalIssuedWeight };
   };
 
   return (
     <div className="min-h-screen bg-slate-100 font-sans" dir="rtl">
       
-      {/* نیویگیشن ٹیبز (Navigation Header) - پرنٹ کے دوران غائب ہو جائے گا */}
+      {/* Navigation Header */}
       <div className="bg-slate-900 text-white p-3 shadow-md border-b border-slate-800 sticky top-0 z-50 print:hidden">
         <div className="max-w-5xl mx-auto flex flex-wrap justify-between items-center gap-2">
           <div className="flex flex-wrap gap-2">
@@ -168,7 +195,7 @@ export default function App() {
                   : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
               }`}
             >
-              🧵 2. دھاگا اسٹاک
+              🧵 2. دھاگا اسٹاک (خام مال)
             </button>
 
             <button
@@ -204,6 +231,7 @@ export default function App() {
       </div>
 
       <div className="p-4 md:p-8">
+
         {/* ================= tab 1: پروڈکشن فارم ================= */}
         {activeTab === 'production' && (
           <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
@@ -212,12 +240,6 @@ export default function App() {
                 <h2 className="text-2xl font-bold">روزانہ کی پروڈکشن کا اندراج</h2>
                 <p className="text-indigo-200 text-sm mt-1">دستانوں کی تیاری درجنوں کے حساب سے درج کریں</p>
               </div>
-              <button
-                onClick={handlePrint}
-                className="hidden print:hidden md:flex px-3 py-1.5 bg-indigo-800 hover:bg-indigo-900 text-white font-bold text-xs rounded-lg border border-indigo-500 items-center gap-1"
-              >
-                🖨️ پرنٹ
-              </button>
             </div>
 
             {successMessage && (
@@ -337,13 +359,13 @@ export default function App() {
           </div>
         )}
 
-        {/* ================= tab 2: دھاگا انوینٹری ================= */}
+        {/* ================= tab 2: دھاگا انوینٹری (خودکار مائنس لاجک کے ساتھ) ================= */}
         {activeTab === 'inventory' && (
           <div className="max-w-4xl mx-auto space-y-6">
             <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-lg flex justify-between items-center">
               <div>
-                <h2 className="text-2xl font-bold">دھاگہ اور خام مال انوینٹری Report</h2>
-                <p className="text-slate-400 text-sm mt-1">گودام میں موجود بوریوں اور وزن کا حساب ({todayDate})</p>
+                <h2 className="text-2xl font-bold">گودام میں خام مال اور بقایا اسٹاک</h2>
+                <p className="text-slate-400 text-sm mt-1">جاری کردہ دھاگے کے بعد خودکار مائنس شدہ بقایا ریکارڈ ({todayDate})</p>
               </div>
               <button
                 onClick={handlePrint}
@@ -353,34 +375,54 @@ export default function App() {
               </button>
             </div>
 
-            {/* گودام کا موجودہ اسٹاک کارڈز */}
+            {/* خودکار مائنس والے بقایا خام مال کے کارڈز */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {threads.map((item) => {
-                const totalKg = item.bags * item.weightPerBagKg;
-                const isLowStock = item.bags <= item.minLimitBags;
+              {initialThreads.map((item) => {
+                const totalInitialKg = item.initialBags * item.weightPerBagKg;
+                const { totalIssuedBags, totalIssuedWeight } = calculateRemainingStock(item.name);
+                
+                // بقایا حساب (Minus)
+                const remainingBags = Math.max(0, item.initialBags - totalIssuedBags);
+                const remainingKg = Math.max(0, totalInitialKg - totalIssuedWeight);
+                const isLowStock = remainingBags <= item.minLimitBags;
+
                 return (
                   <div
                     key={item.id}
-                    className={`p-5 rounded-2xl border bg-white shadow-sm ${
-                      isLowStock ? 'border-rose-300 bg-rose-50/30' : 'border-slate-200'
+                    className={`p-5 rounded-2xl border bg-white shadow-sm transition-all ${
+                      isLowStock ? 'border-rose-400 bg-rose-50/40' : 'border-slate-200'
                     }`}
                   >
-                    <div className="flex justify-between items-start mb-3">
+                    <div className="flex justify-between items-start mb-2">
                       <h3 className="font-bold text-slate-800 text-lg">{item.name}</h3>
                       {isLowStock && (
-                        <span className="bg-rose-100 text-rose-700 text-xs px-2 py-0.5 rounded-full font-bold print:hidden">
+                        <span className="bg-rose-100 text-rose-700 text-xs px-2.5 py-1 rounded-full font-bold animate-pulse">
                           کم اسٹاک!
                         </span>
                       )}
                     </div>
-                    <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-100">
+
+                    {/* آمد اور جاری کا موازنہ */}
+                    <div className="text-[11px] text-slate-500 space-y-1 mb-3 bg-slate-50 p-2.5 rounded-xl border">
+                      <div className="flex justify-between">
+                        <span>کل موصول (آمد):</span>
+                        <span className="font-bold text-slate-700">{item.initialBags} بورے ({totalInitialKg} kg)</span>
+                      </div>
+                      <div className="flex justify-between text-rose-600">
+                        <span>جاری کردہ (مائنس):</span>
+                        <span className="font-bold">-{totalIssuedBags} بورے (-{totalIssuedWeight} kg)</span>
+                      </div>
+                    </div>
+
+                    {/* بقایا اسٹاک (Remaining Stock) */}
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
                       <div>
-                        <span className="text-xs text-slate-500 block">کل بورے (Bags)</span>
-                        <span className="text-xl font-black text-slate-800">{item.bags} بورے</span>
+                        <span className="text-xs text-slate-500 block">بقایا بورے</span>
+                        <span className="text-2xl font-black text-emerald-600">{remainingBags} بورے</span>
                       </div>
                       <div>
-                        <span className="text-xs text-slate-500 block">کل وزن (کلوگرام)</span>
-                        <span className="text-xl font-black text-indigo-600">{totalKg} kg</span>
+                        <span className="text-xs text-slate-500 block">بقایا وزن</span>
+                        <span className="text-2xl font-black text-indigo-600">{remainingKg} kg</span>
                       </div>
                     </div>
                   </div>
@@ -388,14 +430,14 @@ export default function App() {
               })}
             </div>
 
-            {/* دھاگا جاری کرنے کا فارم */}
+            {/* فیکٹری میں جاری کرنے کا فارم */}
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
               <div className="border-b pb-3 flex justify-between items-center">
                 <div>
                   <h3 className="text-lg font-bold text-slate-800">
-                    {editingId ? '✏️ جاری کردہ دھاگے کے ریکارڈ میں ترمیم کریں' : 'فیکٹری میں جاری کردہ دھاگے کا اندراج (Issue to Factory)'}
+                    {editingId ? '✏️ جاری کردہ دھاگے کا ریکارڈ تبدیل کریں' : 'فیکٹری کے لیے دھاگا جاری کریں (Issue Thread)'}
                   </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">فیکٹری کے لیے بھیجے جانے والے بوروں اور وزن کا ریکارڈ محفوظ کریں</p>
+                  <p className="text-xs text-slate-500 mt-0.5">یہاں جتنے بورے اور وزن جاری کریں گے، اوپر خام مال سے مائنس ہو جائے گا</p>
                 </div>
               </div>
 
@@ -425,14 +467,14 @@ export default function App() {
                     onChange={handleIssueChange}
                     className="w-full p-2.5 bg-white border rounded-xl text-xs font-bold text-slate-800"
                   >
-                    {threads.map((t) => (
+                    {initialThreads.map((t) => (
                       <option key={t.id} value={t.name}>{t.name}</option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">بورے (Bags)</label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">جاری کردہ بورے (Bags)</label>
                   <input
                     type="number"
                     step="0.5"
@@ -445,7 +487,7 @@ export default function App() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">وزن (کلوگرام)</label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">جاری کردہ وزن (kg)</label>
                   <input
                     type="number"
                     step="0.5"
@@ -464,7 +506,7 @@ export default function App() {
                       editingId ? 'bg-amber-600 hover:bg-amber-700' : 'bg-indigo-600 hover:bg-indigo-700'
                     }`}
                   >
-                    {editingId ? '💾 ترمیم شدہ ریکارڈ محفوظ کریں' : '+ جاری کردہ دھاگا محفوظ کریں'}
+                    {editingId ? '💾 تبدیل شدہ ریکارڈ محفوظ کریں' : '📤 دھاگا جاری کریں (Minus from Stock)'}
                   </button>
                   {editingId && (
                     <button
@@ -481,56 +523,66 @@ export default function App() {
                 </div>
               </form>
 
-              {/* جاری شدہ دھاگے کا ریکارڈ (Table Log) */}
+              {/* جاری شدہ دھاگے کی ہسٹری (Cloud Record) */}
               <div className="mt-4 overflow-x-auto">
-                <h4 className="font-bold text-slate-700 text-sm mb-2">حالیہ جاری شدہ ریکارڈ (Issue History)</h4>
-                <table className="w-full text-right border-collapse text-xs md:text-sm">
-                  <thead>
-                    <tr className="bg-slate-100 text-slate-700 border-b">
-                      <th className="p-2.5">تاریخ</th>
-                      <th className="p-2.5">دھاگے کا نام</th>
-                      <th className="p-2.5">بورے</th>
-                      <th className="p-2.5">وزن (kg)</th>
-                      <th className="p-2.5 print:hidden">ایکشن (کنٹرولز)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {issuedThreads.length === 0 ? (
-                      <tr>
-                        <td colSpan="5" className="text-center p-4 text-slate-400">کوئی ریکارڈ موجود نہیں۔</td>
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="font-bold text-slate-700 text-sm">جاری شدہ دھاگے کا آن لائن لاگ (Issued Log)</h4>
+                  <span className="text-xs text-emerald-600 font-bold flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> لائیو فائر بیس سنک
+                  </span>
+                </div>
+
+                {loading ? (
+                  <div className="text-center p-6 text-slate-500 text-xs">ڈیٹا لوڈ ہو رہا ہے...</div>
+                ) : (
+                  <table className="w-full text-right border-collapse text-xs md:text-sm">
+                    <thead>
+                      <tr className="bg-slate-100 text-slate-700 border-b">
+                        <th className="p-2.5">تاریخ</th>
+                        <th className="p-2.5">دھاگے کا نام</th>
+                        <th className="p-2.5">جاری کردہ بورے</th>
+                        <th className="p-2.5">جاری کردہ وزن (kg)</th>
+                        <th className="p-2.5 print:hidden">ایکشن</th>
                       </tr>
-                    ) : (
-                      issuedThreads.map((item) => (
-                        <tr key={item.id} className="border-b hover:bg-slate-50/50">
-                          <td className="p-2.5 text-slate-600">{item.date}</td>
-                          <td className="p-2.5 font-bold text-slate-800">{item.threadName}</td>
-                          <td className="p-2.5 font-black text-indigo-600">{item.bags} بورے</td>
-                          <td className="p-2.5 font-black text-slate-800">{item.weightKg} kg</td>
-                          <td className="p-2.5 flex items-center gap-2 print:hidden">
-                            <button
-                              onClick={() => handleEdit(item)}
-                              className="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-lg text-xs font-bold border border-amber-300 transition-all"
-                            >
-                              ✏️ ایڈیٹ
-                            </button>
-                            <button
-                              onClick={() => handleDelete(item.id)}
-                              className="px-2.5 py-1 bg-rose-100 hover:bg-rose-200 text-rose-800 rounded-lg text-xs font-bold border border-rose-300 transition-all"
-                            >
-                              🗑️ ڈیلیٹ
-                            </button>
-                          </td>
+                    </thead>
+                    <tbody>
+                      {issuedThreads.length === 0 ? (
+                        <tr>
+                          <td colSpan="5" className="text-center p-4 text-slate-400">ابھی تک فیکٹری کو کوئی دھاگا جاری نہیں کیا گیا۔</td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      ) : (
+                        issuedThreads.map((item) => (
+                          <tr key={item.id} className="border-b hover:bg-slate-50/50">
+                            <td className="p-2.5 text-slate-600">{item.date}</td>
+                            <td className="p-2.5 font-bold text-slate-800">{item.threadName}</td>
+                            <td className="p-2.5 font-black text-rose-600">-{item.bags} بورے</td>
+                            <td className="p-2.5 font-black text-rose-600">-{item.weightKg} kg</td>
+                            <td className="p-2.5 flex items-center gap-2 print:hidden">
+                              <button
+                                onClick={() => handleEdit(item)}
+                                className="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-lg text-xs font-bold border border-amber-300"
+                              >
+                                ✏️ ایڈیٹ
+                              </button>
+                              <button
+                                onClick={() => handleDelete(item.id)}
+                                className="px-2.5 py-1 bg-rose-100 hover:bg-rose-200 text-rose-800 rounded-lg text-xs font-bold border border-rose-300"
+                              >
+                                🗑️ ڈیلیٹ
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </div>
           </div>
         )}
 
-        {/* ================= tab 3: تیار شدہ مال (گودام) ================= */}
+        {/* ================= tab 3: تیار شدہ مال ================= */}
         {activeTab === 'finished' && (
           <div className="max-w-4xl mx-auto space-y-6">
             <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-lg flex justify-between items-center">
@@ -562,9 +614,6 @@ export default function App() {
                         سائز: {stock.size}
                       </span>
                     </div>
-                    <span className="bg-emerald-100 text-emerald-800 text-xs px-2 py-1 rounded-lg font-bold print:hidden">
-                      موجود ہے
-                    </span>
                   </div>
 
                   <div className="grid grid-cols-3 gap-2 pt-3 border-t border-slate-100 text-center">
@@ -587,7 +636,7 @@ export default function App() {
           </div>
         )}
 
-        {/* ================= tab 4: کاریگر اور اجرت (Payroll) ================= */}
+        {/* ================= tab 4: کاریگر اور اجرت ================= */}
         {activeTab === 'payroll' && (
           <div className="max-w-4xl mx-auto space-y-6">
             <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-lg flex justify-between items-center">

@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 export default function App() {
   const [activeTab, setActiveTab] = useState('production');
 
-  // پروڈکشن فارم (درجنوں کے حساب سے)
+  // 1. پروڈکشن فارم اسٹیٹ
   const [formData, setFormData] = useState({
     batchNumber: 'BATCH-2026-081',
     workerName: '',
@@ -16,20 +16,28 @@ export default function App() {
 
   const [successMessage, setSuccessMessage] = useState('');
 
-  // دھاگا انوینٹری (بوروں اور وزن کے حساب سے)
+  // 2. دھاگا انوینٹری
   const [threads] = useState([
     { id: 1, name: '20/2 کاٹن تھریڈ (White)', bags: 10, weightPerBagKg: 45, minLimitBags: 3 },
     { id: 2, name: 'کیولر کٹ ریسسٹنٹ (Kevlar)', bags: 2, weightPerBagKg: 40, minLimitBags: 2 },
     { id: 3, name: 'نائلون تھریڈ (High Tenacity)', bags: 6, weightPerBagKg: 50, minLimitBags: 2 },
   ]);
 
-  // AI تخمینہ (درجنوں سے بوروں کا حساب)
+  // AI تخمینہ
   const [dozensToEstimate, setDozensToEstimate] = useState(100);
-  const [gramsPerDozen, setGramsPerDozen] = useState(540); // 45g per pair * 12 = 540g per dozen
+  const [gramsPerDozen, setGramsPerDozen] = useState(540);
   const [bagWeightKg, setBagWeightKg] = useState(45);
 
   const totalRequiredKg = ((dozensToEstimate * gramsPerDozen) / 1000).toFixed(1);
   const totalBagsNeeded = (totalRequiredKg / bagWeightKg).toFixed(1);
+
+  // 3. تیار شدہ مال (Finished Goods Stock)
+  const [finishedStock, setFinishedStock] = useState([
+    { id: 1, item: 'کاٹن نٹڈ ہینڈ گلوز (Grade A)', size: 'L', cartons: 25, dozensPerCarton: 20, totalDozens: 500 },
+    { id: 2, item: 'کاٹن نٹڈ ہینڈ گلوز (Grade A)', size: 'M', cartons: 18, dozensPerCarton: 20, totalDozens: 360 },
+    { id: 3, item: 'لیٹیکس کوٹڈ گلوز (Grade A)', size: 'XL', cartons: 10, dozensPerCarton: 15, totalDozens: 150 },
+    { id: 4, item: 'مکسڈ بی گریڈ دستانے (Grade B)', size: 'Free Size', cartons: 8, dozensPerCarton: 25, totalDozens: 200 },
+  ]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -46,32 +54,45 @@ export default function App() {
     (parseFloat(formData.dozensProduced) || 0) - (parseFloat(formData.dozensDefective) || 0)
   );
 
+  const totalWarehouseDozens = finishedStock.reduce((acc, curr) => acc + curr.totalDozens, 0);
+
   return (
     <div className="min-h-screen bg-slate-100 font-sans" dir="rtl">
       
-      {/* نیویگیشن ٹیبز */}
+      {/* نیویگیشن ٹیبز (Navigation Header) */}
       <div className="bg-slate-900 text-white p-3 shadow-md border-b border-slate-800 sticky top-0 z-50">
-        <div className="max-w-4xl mx-auto flex justify-center gap-3">
+        <div className="max-w-4xl mx-auto flex flex-wrap justify-center gap-2">
           <button
             onClick={() => setActiveTab('production')}
-            className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
+            className={`px-4 py-2 rounded-xl text-xs md:text-sm font-bold transition-all ${
               activeTab === 'production'
                 ? 'bg-indigo-600 text-white shadow-lg border border-indigo-400'
                 : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
             }`}
           >
-            📋 1. پروڈکشن (درجن)
+            📋 1. پروڈکشن
           </button>
           
           <button
             onClick={() => setActiveTab('inventory')}
-            className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
+            className={`px-4 py-2 rounded-xl text-xs md:text-sm font-bold transition-all ${
               activeTab === 'inventory'
                 ? 'bg-indigo-600 text-white shadow-lg border border-indigo-400'
                 : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
             }`}
           >
-            🧵 2. دھاگا اسٹاک (بہرے)
+            🧵 2. دھاگا اسٹاک
+          </button>
+
+          <button
+            onClick={() => setActiveTab('finished')}
+            className={`px-4 py-2 rounded-xl text-xs md:text-sm font-bold transition-all ${
+              activeTab === 'finished'
+                ? 'bg-indigo-600 text-white shadow-lg border border-indigo-400'
+                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+            }`}
+          >
+            📦 3. تیار شدہ مال (گودام)
           </button>
         </div>
       </div>
@@ -250,7 +271,6 @@ export default function App() {
               })}
             </div>
 
-            {/* AI تخمینہ کیلکولیٹر */}
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
               <h3 className="text-lg font-bold text-slate-800 border-b pb-2">دھاگے کی بوریوں کا تخمینہ (Estimator)</h3>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -287,6 +307,78 @@ export default function App() {
                   <span className="text-xs font-bold text-indigo-500">({totalBagsNeeded} بورے)</span>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================= tab 3: تیار شدہ مال (گودام) ================= */}
+        {activeTab === 'finished' && (
+          <div className="max-w-4xl mx-auto space-y-6">
+            <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-lg flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-bold">تیار شدہ مال کا گودام</h2>
+                <p className="text-slate-400 text-sm mt-1">پیکنگ، کارٹن اور درجنوں کا مکمل اسٹاک</p>
+              </div>
+              <div className="text-left bg-indigo-600/30 border border-indigo-500/40 px-4 py-2 rounded-xl">
+                <span className="text-xs text-indigo-200 block">کل گودام اسٹاک</span>
+                <span className="text-xl font-black text-white">{totalWarehouseDozens} درجن</span>
+              </div>
+            </div>
+
+            {/* گودام اسٹاک ٹیبل / کارڈز */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {finishedStock.map((stock) => (
+                <div key={stock.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-bold text-slate-800 text-base">{stock.item}</h3>
+                      <span className="inline-block mt-1 px-2.5 py-0.5 bg-slate-100 text-slate-600 font-semibold text-xs rounded-md">
+                        سائز: {stock.size}
+                      </span>
+                    </div>
+                    <span className="bg-emerald-100 text-emerald-800 text-xs px-2 py-1 rounded-lg font-bold">
+                      موجود ہے
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 pt-3 border-t border-slate-100 text-center">
+                    <div className="bg-slate-50 p-2 rounded-xl">
+                      <span className="text-[10px] text-slate-500 block">کارٹن/بورے</span>
+                      <span className="text-lg font-bold text-slate-800">{stock.cartons}</span>
+                    </div>
+                    <div className="bg-slate-50 p-2 rounded-xl">
+                      <span className="text-[10px] text-slate-500 block">فی کارٹن</span>
+                      <span className="text-lg font-bold text-slate-800">{stock.dozensPerCarton} درجن</span>
+                    </div>
+                    <div className="bg-indigo-50 p-2 rounded-xl border border-indigo-100">
+                      <span className="text-[10px] text-indigo-600 block">کل درجن</span>
+                      <span className="text-lg font-black text-indigo-700">{stock.totalDozens}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* نیا کارٹن / گودام انٹری فارم */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <h3 className="text-lg font-bold text-slate-800 border-b pb-2">گودام میں نیا اسٹاک شامل کریں</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">آئٹم / کوالٹی</label>
+                  <input type="text" placeholder="کاٹن نٹڈ Grade A" className="w-full p-3 bg-slate-50 border rounded-xl" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">کارٹن کی تعداد</label>
+                  <input type="number" placeholder="10" className="w-full p-3 bg-slate-50 border rounded-xl" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">فی کارٹن (درجن)</label>
+                  <input type="number" placeholder="20" className="w-full p-3 bg-slate-50 border rounded-xl" />
+                </div>
+              </div>
+              <button className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md">
+                گودام اسٹاک اپڈیٹ کریں
+              </button>
             </div>
           </div>
         )}

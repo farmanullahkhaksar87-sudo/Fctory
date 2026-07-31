@@ -41,14 +41,6 @@ export default function App() {
   const [editingId, setEditingId] = useState(null); // ایڈیٹ کے لیے ID ٹریکنگ
   const [issueSuccess, setIssueSuccess] = useState('');
 
-  // AI تخمینہ
-  const [dozensToEstimate, setDozensToEstimate] = useState(100);
-  const [gramsPerDozen, setGramsPerDozen] = useState(540);
-  const [bagWeightKg, setBagWeightKg] = useState(45);
-
-  const totalRequiredKg = ((dozensToEstimate * gramsPerDozen) / 1000).toFixed(1);
-  const totalBagsNeeded = (totalRequiredKg / bagWeightKg).toFixed(1);
-
   // 3. تیار شدہ مال (Finished Goods Stock)
   const [finishedStock] = useState([
     { id: 1, item: 'وول ہاف (Grade A)', size: 'L', cartons: 25, dozensPerCarton: 20, totalDozens: 500 },
@@ -533,45 +525,6 @@ export default function App() {
                     )}
                   </tbody>
                 </table>
-              </div>
-            </div>
-
-            {/* AI تخمینہ باکس */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-              <h3 className="text-lg font-bold text-slate-800 border-b pb-2">دھاگے کی بوریوں کا تخمینہ (Estimator)</h3>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">ٹارگٹ (درجن)</label>
-                  <input
-                    type="number"
-                    value={dozensToEstimate}
-                    onChange={(e) => setDozensToEstimate(e.target.value)}
-                    className="w-full p-3 bg-slate-50 border rounded-xl font-bold text-slate-800"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">فی درجن دھاگا (گرام)</label>
-                  <input
-                    type="number"
-                    value={gramsPerDozen}
-                    onChange={(e) => setGramsPerDozen(e.target.value)}
-                    className="w-full p-3 bg-slate-50 border rounded-xl font-bold text-slate-800"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">بوری کا وزن (kg)</label>
-                  <input
-                    type="number"
-                    value={bagWeightKg}
-                    onChange={(e) => setBagWeightKg(e.target.value)}
-                    className="w-full p-3 bg-slate-50 border rounded-xl font-bold text-slate-800"
-                  />
-                </div>
-                <div className="bg-indigo-50 p-3 rounded-xl border border-indigo-100 text-center flex flex-col justify-center">
-                  <span className="text-xs text-indigo-600 font-semibold">درکار دھاگا</span>
-                  <span className="text-lg font-black text-indigo-700">{totalRequiredKg} kg</span>
-                  <span className="text-xs font-bold text-indigo-500">({totalBagsNeeded} بورے)</span>
-                </div>
               </div>
             </div>
           </div>
